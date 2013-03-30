@@ -14,11 +14,15 @@ class HashedString(val s:String) extends HashedType {
   def hash = s.hashCode()
 }
 
+
 class Suite extends FunSuite {
+  // Implicit conversion 
+  implicit def stringToHashedString(s:String) = new HashedString(s)
+
   test("Same value cons to the same tag") {
     val h = new HashCons[HashedString](4)
-    val (a,aTag)  = h.hashCons(new HashedString("a"))
-    val (b,bTag)  = h.hashCons(new HashedString("a"))
+    val (a,aTag)  = h.hashCons("a")
+    val (b,bTag)  = h.hashCons("a")
     assert(a.s == "a") 
     assert(b.s == "a") 
     assert(aTag == bTag)
@@ -27,8 +31,8 @@ class Suite extends FunSuite {
 
   test("Different values cons to different objects") {
     val h = new HashCons[HashedString](4)
-    val (a,aTag)  = h.hashCons(new HashedString("a"))
-    val (b,bTag)  = h.hashCons(new HashedString("b"))
+    val (a,aTag)  = h.hashCons("a")
+    val (b,bTag)  = h.hashCons("b")
     assert(a.s == "a")
     assert(b.s == "b")
     assert(aTag != bTag)
