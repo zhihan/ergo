@@ -11,7 +11,7 @@ class HashedString(val s:String) extends HashedType {
       case _ => false
     }
   }
-  def hash = s.hashCode()
+  def hash = s.hashCode
 }
 
 
