@@ -34,7 +34,18 @@ class UnionFind[T] (val map:Map[T,T], val proof:Map[T,T],
     case Some(s) => s
     case None => Set(v)
   }
-    
+  
+  // Update for each v redirect the representative to r 
+  private def updateMap( oldMap:Map[T,T], r:T, v:Set[T]) = 
+    v.foldLeft  (oldMap)  ( (m, elem) => m + (elem -> r))  
+  
+  private def updateMinv(minv:Map[T,Set[T]], deleteR:T, keepR:T, unionV: Set[T]) =
+    (minv - deleteR) + (keepR -> unionV)
+  
+  private def updateNeqs( neqs:Map[T,Set[T]], deleteR:T, keepR:T, 
+    deleteS:Set[T], keepS: Set[T]) = 
+    (deleteS.foldLeft (neqs) ( (m, x) => m + (x -> (neqs(x) + keepR)) )) + 
+      (keepR -> (keepS ++ deleteS)) 
 } 
 
 // Factory method

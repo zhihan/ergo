@@ -89,6 +89,7 @@ object HashConSymbol {
   }
   def equal(s1:HashedSymbol, s2:HashedSymbol) = (s1.tag == s2.tag)
   def hash(sv:HashedSymbol) = sv.tag
+
 }
 
 
