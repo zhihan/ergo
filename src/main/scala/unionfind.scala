@@ -7,6 +7,33 @@ package my.uf
 import scala.collection.immutable.TreeMap
 import scala.collection.immutable.TreeSet
 import scala.math.Ordering
+import scala.annotation._
+
+abstract class Formula
+case class Eq[T](val lhs:T, val rhs:T) extends Formula
+case class Neq[T](val lhs:T, val rhs:T) extends Formula
+
+object Formula {
+  def makeEqualities[T](l:List[T]) = {
+  // To be determined
+    ()  
+  }
+}
+
+class PrintUtil[T] {
+  def toS(f:Formula) :String = {
+    f match {
+      case Eq(lhs, rhs) => lhs.toString + "=" + rhs.toString
+      case Neq(lhs, rhs) => lhs.toString + "!=" + rhs.toString
+    }
+  }
+  def printList(l:List[Formula]) {
+    l.foreach ( e => { 
+      print(e.toString)
+      print("\n")
+    })
+  }
+}
 
 // Disjoint-Set with custom compare function 
 class UnionFind[T] (val map:TreeMap[T,T], val proof:TreeMap[T,T], 
@@ -49,12 +76,30 @@ class UnionFind[T] (val map:TreeMap[T,T], val proof:TreeMap[T,T],
     xRNeq.contains(yR) || yRNeq.contains(xR)
   }
 
-/*  def fullpath(x:T):List[T] = {
-    def pathToRoot(x:T, acc:List[T]):List[T] = {
+  def fullpath(x:T):List[T] = {
+    // Tail-recursive subroutine
+    @tailrec def pathToRoot(x:T, acc:List[T]):List[T] = {
       val next = proof(x)
-      
+      if (ord.compare(x, next) == 0) 
+        acc
+      else
+        pathToRoot(next, next :: acc)
     }
-  }*/
+    pathToRoot(x, List[T](x))
+  }
+
+  // Explain why x and y are equal 
+  def explain(x:T, y:T): List[Eq[T]] = {
+    val xR = find(x)
+    val yR = find(y)
+    if (ord.compare(xR, yR) == 0) {
+      val listX = fullpath(x)
+      val listY = fullpath(y)
+      
+    } else
+      // They are not known to be equal
+      List()
+  }
 } 
 
 // Factory method
