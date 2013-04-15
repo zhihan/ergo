@@ -134,7 +134,7 @@ class UnionFind[T] (val map:TreeMap[T,T], val proof:TreeMap[T,T],
   }
 
   // Creational patterns: union and distinct
-  def union(x:T, y:T) = {
+  def union2(x:T, y:T) = {
     // Update for each v redirect the representative to r 
     def updateMap( oldMap:TreeMap[T,T], r:T, v:TreeSet[T]) = 
     v.foldLeft  (oldMap)  ( (m, elem) => m + (elem -> r))  
@@ -178,17 +178,25 @@ class UnionFind[T] (val map:TreeMap[T,T], val proof:TreeMap[T,T],
         val newMinv = updateMinv(minv, xR, yR, newS)
         val newProof = updateProof(proof, x, y)
         val newNEqs = updateNeqs(neqs, xR, yR, xRNEq, yRNEq)
-        new UnionFind[T](newMap, newProof, newMinv, newNEqs, ord)
+        val r = new UnionFind[T](newMap, newProof, newMinv, newNEqs, ord)
+        (r, Some(xR), Some(yR))
      } else {
         // Keep xR, delete yR
         val newMap = updateMap(map, xR, yS)
         val newMinv = updateMinv(minv, yR, xR, newS)
         val newProof = updateProof(proof, y, x)
         val newNEqs = updateNeqs(neqs, yR, xR, yRNEq, xRNEq)
-        new UnionFind[T](newMap, newProof, newMinv, newNEqs, ord)
+        val r= new UnionFind[T](newMap, newProof, newMinv, newNEqs, ord)
+        (r, Some(xR), Some(yR))
       }
     } else
-      this  // (UF, deletedR, deleted)
+      (this, None, None)
+  }
+  
+  // Simple version of union, for testing purposes 
+  def union(x:T, y:T) = {
+    val(r, _, _ ) = union2(x,y)
+    r
   }
   
   def distinct(x:T, y:T) = {
