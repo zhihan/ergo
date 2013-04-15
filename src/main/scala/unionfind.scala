@@ -14,9 +14,18 @@ case class Eq[T](val lhs:T, val rhs:T) extends Formula
 case class Neq[T](val lhs:T, val rhs:T) extends Formula
 
 object Formula {
-  def makeEqualities[T](l:List[T]) = {
-  // To be determined
-    ()  
+  def makeEqualities[T](l:List[T]) : List[Eq[T]] = {
+     // Recursive function
+    def loop(l:List[T], top:T, acc:List[Eq[T]]): List[Eq[T]] = {
+      l match {
+        case Nil => acc
+        case hd :: tail => loop (tail, hd, Eq[T](top, hd) :: acc)
+      } 
+    }
+    l match {
+      case Nil | _ ::Nil => Nil
+      case hd :: tail => loop(tail, hd, List[Eq[T]]())
+    } 
   }
 }
 
@@ -95,10 +104,12 @@ class UnionFind[T] (val map:TreeMap[T,T], val proof:TreeMap[T,T],
     if (ord.compare(xR, yR) == 0) {
       val listX = fullpath(x)
       val listY = fullpath(y)
-      
+      val xEqs = Formula.makeEqualities[T](listX)
+      val yEqs = Formula.makeEqualities[T](listY)
+      xEqs ++ yEqs   
     } else
       // They are not known to be equal
-      List()
+      Nil
   }
 } 
 
