@@ -44,7 +44,8 @@ class PrintUtil[T] {
   }
 }
 
-// Disjoint-Set with custom compare function 
+// Disjoint-Set with custom compare function, instead of type-class the 
+// client must provide the ordering explicitly  
 class UnionFind[T] (val map:TreeMap[T,T], val proof:TreeMap[T,T], 
     val minv:TreeMap[T,TreeSet[T]], val neqs: TreeMap[T,TreeSet[T]], 
     val ord: Ordering[T]) {
@@ -77,12 +78,18 @@ class UnionFind[T] (val map:TreeMap[T,T], val proof:TreeMap[T,T],
   }
 
   ///////// Query   
-  def are_distinct(x:T, y:T) = {
+  def areDistinct(x:T, y:T) = {
     val xR = find(x)
     val yR = find(y)
     val xRNeq = neqs(xR)
     val yRNeq = neqs(yR)
     xRNeq.contains(yR) || yRNeq.contains(xR)
+  }
+
+  def areEqual(x:T, y:T) = {
+    val xR = find(x)
+    val yR = find(y)
+    ord.compare(xR, yR) == 0
   }
 
   def fullpath(x:T):List[T] = {
@@ -111,77 +118,94 @@ class UnionFind[T] (val map:TreeMap[T,T], val proof:TreeMap[T,T],
       // They are not known to be equal
       Nil
   }
-} 
 
-// Factory method
-class UFFactory[T] (val ord:Ordering[T]) {
-  def empty = new UnionFind[T](TreeMap[T,T]()(ord), TreeMap[T,T]()(ord), 
-    TreeMap[T,TreeSet[T]]()(ord), TreeMap[T,TreeSet[T]]()(ord), ord)
-  
-  // Update for each v redirect the representative to r 
-  private def updateMap( oldMap:TreeMap[T,T], r:T, v:TreeSet[T]) = 
+  // Explain why x and y are not equal
+  def explainNeq(x:T, y:T): List[Formula] = {
+    val xR = find(x)
+    val yR = find(y)
+    if (areDistinct(xR, yR) ) {
+      val xEqs = explain(x, xR)
+      val yEqs = explain(yR, y)
+      Neq[T](xR,yR) :: ( xEqs ++ yEqs )
+    } else
+      // They are not known to be equal
+      Nil
+    
+  }
+
+  // Creational patterns: union and distinct
+  def union(x:T, y:T) = {
+    // Update for each v redirect the representative to r 
+    def updateMap( oldMap:TreeMap[T,T], r:T, v:TreeSet[T]) = 
     v.foldLeft  (oldMap)  ( (m, elem) => m + (elem -> r))  
 
-  // Update inverse map 
-  private def updateMinv(minv:TreeMap[T,TreeSet[T]], deleteR:T, keepR:T, unionV: TreeSet[T]) =
-    (minv - deleteR) + (keepR -> unionV)
+    // Update inverse map 
+    def updateMinv(minv:TreeMap[T,TreeSet[T]], deleteR:T, 
+        keepR:T, unionV: TreeSet[T]) =
+      (minv - deleteR) + (keepR -> unionV)
  
-  // Update the set of non-equalifies 
-  private def updateNeqs( neqs:TreeMap[T,TreeSet[T]], delR:T, keepR:T, 
-    delNEq:TreeSet[T], keepNEq: TreeSet[T]) = 
+    // Update the set of non-equalifies 
+    def updateNeqs( neqs:TreeMap[T,TreeSet[T]], delR:T, keepR:T, 
+      delNEq:TreeSet[T], keepNEq: TreeSet[T]) = 
     (delNEq.foldLeft (neqs) ( (m, x) => m + (x -> (neqs(x) + keepR)) )) + 
       (keepR -> (keepNEq ++ delNEq)) 
   
-  // Update the proof chain
-  private def updateProof(oldProof:TreeMap[T,T], x:T, y:T) : TreeMap[T,T] = {
-    val next = oldProof(x) 
-    val newProof = oldProof + (x -> y)
-    if (ord.compare(x, next) == 0) 
-      newProof
-    else
-      updateProof(newProof, next, x) 
-  }
-  
-  def union( m:UnionFind[T], x:T, y:T) = {
-    val xR = m.find(x)
-    val yR = m.find(y)
-    val xRNEq = m.neqs(xR)
-    val yRNEq = m.neqs(yR)
-    if (!xRNEq.contains(xR) || !yRNEq.contains(yR) ) {
+    // Update the proof chain
+    def updateProof(oldProof:TreeMap[T,T], x:T, y:T) : TreeMap[T,T] = {
+      val next = oldProof(x) 
+      val newProof = oldProof + (x -> y)
+      if (ord.compare(x, next) == 0) 
+        newProof
+      else
+        updateProof(newProof, next, x) 
+    }
+
+    val xR = find(x)
+    val yR = find(y)
+    val xRNEq = neqs(xR)
+    val yRNEq = neqs(yR)
+    if (xRNEq.contains(xR) || yRNEq.contains(yR) ) {
       throw new RuntimeException("Inconsistence")
     }
     if (ord.compare(xR, yR) != 0 ) {
-      val xS = m.minv(xR)
-      val yS = m.minv(yR)
+      val xS = minv(xR)
+      val yS = minv(yR)
       val newS = xS ++ yS
       
       if (xS.size < yS.size) {
         // Keep yR, delete xR
-        val newMap = updateMap(m.map, yR, xS)
-        val newMinv = updateMinv(m.minv, xR, yR, newS)
-        val newProof = updateProof(m.proof, x, y)
-        val newNEqs = updateNeqs(m.neqs, xR, yR, xRNEq, yRNEq)
-        (new UnionFind[T](newMap, newProof, newMinv, newNEqs, ord), 
-        Some(xR))
-      } else {
+        val newMap = updateMap(map, yR, xS)
+        val newMinv = updateMinv(minv, xR, yR, newS)
+        val newProof = updateProof(proof, x, y)
+        val newNEqs = updateNeqs(neqs, xR, yR, xRNEq, yRNEq)
+        new UnionFind[T](newMap, newProof, newMinv, newNEqs, ord)
+     } else {
         // Keep xR, delete yR
-        val newMap = updateMap(m.map, xR, yS)
-        val newMinv = updateMinv(m.minv, yR, xR, newS)
-        val newProof = updateProof(m.proof, y, x)
-        val newNEqs = updateNeqs(m.neqs, yR, xR, yRNEq, xRNEq)
-        (new UnionFind[T](newMap, newProof, newMinv, newNEqs, ord), 
-        Some(yR))
+        val newMap = updateMap(map, xR, yS)
+        val newMinv = updateMinv(minv, yR, xR, newS)
+        val newProof = updateProof(proof, y, x)
+        val newNEqs = updateNeqs(neqs, yR, xR, yRNEq, xRNEq)
+        new UnionFind[T](newMap, newProof, newMinv, newNEqs, ord)
       }
     } else
-      (m, None)  // (UF, deletedR, deleted)
+      this  // (UF, deletedR, deleted)
   }
   
-  def distinct(m:UnionFind[T], x:T, y:T) = {
-    val (xR, yR) = m.findTwo(x, y)
-    val xRNEq = m.neqs(xR)
-    val yRNEq = m.neqs(yR)
-    val newNEqs =  m.neqs + (yR -> (yRNEq + xR)) + (xR->(xRNEq + yR))
-    new UnionFind[T](m.map, m.proof, m.minv, newNEqs, ord)
+  def distinct(x:T, y:T) = {
+    val (xR, yR) = findTwo(x, y)
+    val xRNEq = neqs(xR)
+    val yRNEq = neqs(yR)
+    val newNEqs =  neqs + (yR -> (yRNEq + xR)) + (xR->(xRNEq + yR))
+    new UnionFind[T](map, proof, minv, newNEqs, ord)
   }  
  
+
+} 
+
+// Factory method
+object UnionFind {
+  def empty[T] (ord:Ordering[T]) = 
+    new UnionFind[T](TreeMap[T,T]()(ord), TreeMap[T,T]()(ord), 
+      TreeMap[T,TreeSet[T]]()(ord), TreeMap[T,TreeSet[T]]()(ord), ord)
+  
 }
