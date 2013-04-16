@@ -45,7 +45,7 @@ class HashCons[T<:HashedType] (size:Int) {
   }
 
   private def nextSize(n:Int) = (3*n/2 + 3)
-  def resize() {
+  def resize {
     // Resize table prevents a hash bucket grows too big
     
     val newSize = nextSize(table.length)
@@ -68,7 +68,7 @@ class HashCons[T<:HashedType] (size:Int) {
     
     if (table(index).length > table.length * limit) {
       // bucket is significantly longer than table
-      resize()
+      resize
     }
   }
 

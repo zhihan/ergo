@@ -25,6 +25,7 @@ object Symbol {
     case BinopSymbol(Divide) => "/" 
     case Const(id) => id.toString
   }
+
 }
 
 
@@ -45,12 +46,14 @@ object SymbolType {
   }
 }
 
+// Main class is called SymbolView, it has a symbol representing its name and a 
+// type.
 case class SymbolView(val symb:Symbol, val stype:SymbolType) extends HashedType {
   /** Equality of symbol view is defined as 
      - For variables, they are equal if the types are identical
      - Otherwise, they are equal if their type match and the symbols are identical
   */
-  def equal(other: HashedType) = {
+  override def equal(other: HashedType) = {
     def eqType(t1:SymbolType, t2:SymbolType) = {
       (t1,t2) match {
         case (_,SUnknown(_)) => true
@@ -79,7 +82,33 @@ case class SymbolView(val symb:Symbol, val stype:SymbolType) extends HashedType 
 }
 
 
-class HashedSymbol(val sv:SymbolView, val tag:Int) 
+class HashedSymbol(val sv:SymbolView, val tag:Int) {
+  def equal(other:HashedSymbol) = (tag == other.tag)
+ 
+  def isConst = {
+    this.sv.symb match {
+      case Const(_) => true
+      case _ => false
+    }
+  }
+
+  def isVar = {
+    this.sv.symb match {
+      case Var(_) => true
+      case _ => false
+    }
+  }
+
+  def value = {
+    this.sv.symb match {
+      case Const(id) => id
+      case _ => throw new RuntimeException("Not found")
+    }
+  }
+
+  def isCommutative = false
+  def isAssociative = false
+}
 
 object HashConSymbol {
   val tbl = new HashCons[SymbolView](1000)
@@ -87,9 +116,25 @@ object HashConSymbol {
     val (sv, tag) = tbl.hashCons( SymbolView(s,t)) 
     new HashedSymbol(sv, tag)
   }
-  def equal(s1:HashedSymbol, s2:HashedSymbol) = (s1.tag == s2.tag)
+  def equal(s1:HashedSymbol, s2:HashedSymbol) = s1.equal(s2)
   def hash(sv:HashedSymbol) = sv.tag
 
 }
 
 
+case class Term(val f:SymbolView, val xs:List[Term]) extends HashedType {
+  override def hash = this.hashCode
+  override def equal(other: HashedType) = {
+    if (other.isInstanceOf[Term]) {
+      val that = other.asInstanceOf[Term]
+      f.equal(that.f) && (xs, that.xs).zipped.forall( (x,y) => x.equal(y))
+    } else {
+      false
+    }
+  } 
+}
+
+object HashConTerm {
+  val tbl = new HashCons[Term](1000)
+  
+}

@@ -26,7 +26,7 @@ class Context[T] (val use:TreeMap[T,TreeSet[T]],
   }
   
   def congruent(u1:Term, u2:Term):Boolean = {
-    
+   false 
   }
   
 }
