@@ -81,7 +81,7 @@ case class SymbolView(val symb:Symbol, val stype:SymbolType) extends HashedType 
   override def toString = Symbol.symbolToString(symb) + ":" + SymbolType.typeToString(stype)
 }
 
-
+// A Symbol with its hash tag
 class HashedSymbol(val sv:SymbolView, val tag:Int) {
   def equal(other:HashedSymbol) = (tag == other.tag)
  
@@ -118,13 +118,14 @@ object HashConSymbol {
   }
   def equal(s1:HashedSymbol, s2:HashedSymbol) = s1.equal(s2)
   def hash(sv:HashedSymbol) = sv.tag
-
+  def clear = tbl.createTable(1000)
 }
 
-
-case class Term(val f:SymbolView, val xs:List[Term]) extends HashedType {
+// Terms 
+// Note the constructor refers to HashedTerms which is defined later
+case class Term(val f:SymbolView, val xs:List[HashedTerm]) extends HashedType {
   override def hash = this.hashCode
-  override def equal(other: HashedType) = {
+  override def equal(other: HashedType):Boolean = {
     if (other.isInstanceOf[Term]) {
       val that = other.asInstanceOf[Term]
       f.equal(that.f) && (xs, that.xs).zipped.forall( (x,y) => x.equal(y))
@@ -134,7 +135,28 @@ case class Term(val f:SymbolView, val xs:List[Term]) extends HashedType {
   } 
 }
 
+class HashedTerm(val t:Term, val tag:Int) {
+  def equal(other:HashedTerm) = (tag == other.tag)
+
+  def subst(s:Map[SymbolView,HashedTerm]):HashedTerm = {
+    if (s.contains(t.f)) 
+      // Maps (variables) to its values
+      s(t.f)
+    else 
+      HashConTerm.make(t.f, t.xs.map(x => 
+        x.subst(s) ) )
+  }
+}
+
 object HashConTerm {
   val tbl = new HashCons[Term](1000)
+  def make(sym:SymbolView, xs:List[HashedTerm]) = {
+    val (v, tag) = tbl.hashCons(Term(sym, xs))
+    new HashedTerm(v, tag)
+  }
+  def equal(h1:HashedTerm, h2:HashedTerm) = h1.equal(h2)
+  def hash(ht:HashedTerm) = ht.tag
+  def clear = tbl.createTable(1000)
+
   
 }

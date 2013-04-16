@@ -71,11 +71,15 @@ class HashCons[T<:HashedType] (size:Int) {
       resize
     }
   }
+  private def posMod(i:Int, n:Int) = {
+    val m = i % n
+    if (m < 0) m+n else m
+  }
 
   def addNode(d:(T,Int)) {
     // Compute hash code and use it modulo table length
     // as the index of the entry
-    addNodeAtRow(d, d._1.hash % table.length)
+    addNodeAtRow(d, posMod(d._2, table.length) )
   }
   
 
@@ -87,7 +91,7 @@ class HashCons[T<:HashedType] (size:Int) {
   }
   def hashCons(v:T): (T,Int) = {
     val k = v.hash 
-    val index = k % table.length
+    val index = posMod(k, table.length)
     val bucket = table(index)
     val d = bucket.find( _ match {  
       case (x,_) => v.equal(x)
@@ -102,7 +106,7 @@ class HashCons[T<:HashedType] (size:Int) {
     }
   }
 
-  def stat() = {
+  def stat  = {
     "Table size:" + table.length + "; " +
     "count:" + count() + "; " +
     "limit:" + limit
