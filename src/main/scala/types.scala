@@ -1,6 +1,8 @@
 package my.ergo
 
 import my.util._
+import scala.math.Ordering
+
 /* Binary operators */
 abstract class Binop 
 object Plus extends Binop
@@ -75,7 +77,7 @@ case class SymbolView(val symb:Symbol, val stype:SymbolType) extends HashedType 
     }
   }
 
-  def hash = symb.hashCode 
+  override def hash = symb.hashCode 
   def eqType(t:SymbolType) = (stype == t)
 
   override def toString = Symbol.symbolToString(symb) + ":" + SymbolType.typeToString(stype)
@@ -146,6 +148,12 @@ class HashedTerm(val t:Term, val tag:Int) {
       HashConTerm.make(t.f, t.xs.map(x => 
         x.subst(s) ) )
   }
+
+  def hash = tag
+}
+
+object HashedTermOrdering extends Ordering[HashedTerm] {
+  def compare(t1: HashedTerm, t2: HashedTerm) = t1.tag - t2.tag
 }
 
 object HashConTerm {
@@ -155,7 +163,7 @@ object HashConTerm {
     new HashedTerm(v, tag)
   }
   def equal(h1:HashedTerm, h2:HashedTerm) = h1.equal(h2)
-  def hash(ht:HashedTerm) = ht.tag
+  def hashCode(ht:HashedTerm) = ht.tag
   def clear = tbl.createTable(1000)
 
   
