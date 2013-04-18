@@ -5,7 +5,7 @@ import my.util._
 
 import org.scalatest.FunSuite
 
-class Suite extends FunSuite {
+class TypesSuite extends FunSuite {
   test("Symbol views") {
     HashConSymbol.clear
     val v1 = HashConSymbol.make(Name("f"), SReal)

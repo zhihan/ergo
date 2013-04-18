@@ -11,11 +11,11 @@ object Multiply extends Binop
 object Divide extends Binop
 
 /** Symbol can be a name, a var, a Const int or a binary operator */
-abstract class Symbol
+sealed abstract class Symbol
 case class Name (name:String) extends Symbol
 case class Var (name:String) extends Symbol
 case class BinopSymbol (op:Binop) extends Symbol
-case class Const (id:Int) extends Symbol
+case class Const (i:Int) extends Symbol
 
 object Symbol {
   def symbolToString: Symbol=>String = {
@@ -25,7 +25,7 @@ object Symbol {
     case BinopSymbol(Minus) => "-"
     case BinopSymbol(Multiply) => "*"
     case BinopSymbol(Divide) => "/" 
-    case Const(id) => id.toString
+    case Const(i) => i.toString
   }
 
 }
@@ -103,7 +103,7 @@ class HashedSymbol(val sv:SymbolView, val tag:Int) {
 
   def value = {
     this.sv.symb match {
-      case Const(id) => id
+      case Const(i) => i
       case _ => throw new RuntimeException("Not found")
     }
   }

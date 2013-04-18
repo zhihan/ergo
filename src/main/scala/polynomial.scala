@@ -5,18 +5,19 @@ import scala.math._
 import scala.collection.immutable.Map
 import my.ergo._
 
-case class Rational(n:Int, d:Int)
+class Rational(n:Int, d:Int)
 {
   @tailrec private def gcd(x:Int, y:Int): Int = 
     if (x==0) y else gcd(y%x, x)
 
   private def normalize(n:Int,d:Int) = {
+    if (d==0) throw new RuntimeException("Divide by zero")
     val g = gcd(n,d)
     val nn = n/g
-    val nd = d/g
+    val nd = if (nn == 0) 1 else d/g // 0/k reduce to 0/1
     if (nd < 0 )
       (-nn, -nd)
-    else
+    else 
       (nn, nd) 
   }
 
@@ -30,6 +31,18 @@ case class Rational(n:Int, d:Int)
   def /(that:Rational) = new Rational(num * that.den, den * that.num)
   def isZero: Boolean = (num == 0)
   def uminus = new Rational( -num, den)
+
+  override def equals(that: Any) = {
+    that match {
+      case y:Rational => (num == y.num) && (den == y.den)
+      case y:Int => this.equals(new Rational(y,1))
+      case _ => false
+    }
+  }
+}
+
+object Rational {
+  def apply(n:Int, d:Int) = new Rational(n,d)
 }
 
 object RationalConversion {
@@ -82,7 +95,7 @@ case class Affine (vars:Map[V,Rational], val b:Rational) {
 
   def subst(x:V, v:Affine): Affine = {
     val coeff = A(x)
-    this + (v * coeff)
+    new Affine(A - x, b) + (v * coeff)
   }
 
   def solve: (Option[(V, Affine)], Solution) = {
@@ -96,6 +109,9 @@ case class Affine (vars:Map[V,Rational], val b:Rational) {
   }
 
   def uminus: Affine = Affine(A.mapValues(e => e.uminus), b.uminus)
+
+  def isZero: Boolean = A.isEmpty && (b == Rational(0,1))
+  def isValue: Boolean = A.isEmpty 
 }
 
 
@@ -138,3 +154,36 @@ class AffineRep ( val f:Affine) extends Rep[AffineRep] {
   override def hashCode = f.hashCode 
 }
 
+object AffineRep {
+  import RationalConversion._
+
+  private def value(v:Rational) = new AffineRep(Affine(Map[V,Rational](), v))
+  private def variable(n:String) = new AffineRep(Affine(Map(V(n)->Rational(1,1)),0))
+  
+  private def extract(l:List[HashedTerm]) = 
+    (l.head, l.tail.head)
+
+  def make (term:HashedTerm): AffineRep = {
+    term.t.f.symb match {
+      case Name(n) => throw new RuntimeException("Names not supported")
+      case Var(n) =>  variable(n)
+      case BinopSymbol(Plus) => {
+        val(l,r) = extract(term.t.xs)
+        new AffineRep(make(l).f + make(r).f)
+      }
+      case BinopSymbol(Minus) => {
+        val(l,r) = extract(term.t.xs)
+        new AffineRep(make(l).f - make(r).f)
+      }
+      case BinopSymbol(Multiply) => {
+        val(l,r) = extract(term.t.xs)
+        new AffineRep(make(l).f * make(r).f)
+      }
+      case BinopSymbol(Divide) => {
+        val(l,r) = extract(term.t.xs)
+        new AffineRep(make(l).f + make(r).f)
+      }
+      case Const(i) => value(i)
+    }
+  }
+}
