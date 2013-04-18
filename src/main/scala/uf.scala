@@ -2,12 +2,14 @@ package my.ergo
 
 import scala.collection.immutable.TreeMap
 import scala.collection.immutable.TreeSet
+import scala.collection.immutable.Set
+import scala.collection.immutable.Map
 import scala.math.Ordering
 
-class UF (val map:TreeMap[HashedTerm, List[Rep]], 
-  val minv: TreeMap[Rep,TreeSet[HashedTerm]],
-  val mapm: TreeMap[HashedTerm, TreeSet[Rep]], 
-  val neqs: TreeMap[Rep, TreeSet[HashedTerm]]) {
+class UF[T] (val map:TreeMap[HashedTerm, List[Rep[T]]], 
+  val minv: Map[Rep[T],TreeSet[HashedTerm]],
+  val mapm: TreeMap[HashedTerm, Set[Rep[T]]], 
+  val neqs: Map[Rep[T], TreeSet[HashedTerm]]) {
 // map : term -> the representative
 // minv: representative -> class of terms
 // mapm: leaf -> set of terms whose reprentative uses this leaf
@@ -23,13 +25,10 @@ object UF {
     override def compare(a:HashedTerm, b:HashedTerm) = a.hash - b.hash
   }
 
-  implicit object repOrder extends Ordering[Rep] {
-    override def compare(a:Rep, b:Rep) = a.hash - b.hash
-  }
 
-  def empty = new UF( TreeMap[HashedTerm, List[Rep]](),
-    TreeMap[Rep, TreeSet[HashedTerm]] (),
-    TreeMap[HashedTerm, TreeSet[Rep]] (),
-    TreeMap[Rep, TreeSet[HashedTerm]] ())
+  def empty[T] = new UF( TreeMap[HashedTerm, List[Rep[T]]](),
+    Map[Rep[T], TreeSet[HashedTerm]] (),
+    TreeMap[HashedTerm, Set[Rep[T]]] (),
+    Map[Rep[T], TreeSet[HashedTerm]] ())
    
 }
