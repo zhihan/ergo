@@ -167,19 +167,19 @@ object AffineRep {
     term.t.f.symb match {
       case Name(n) => throw new RuntimeException("Names not supported")
       case Var(n) =>  variable(n)
-      case BinopSymbol(Plus) => {
+      case Plus => {
         val(l,r) = extract(term.t.xs)
         new AffineRep(make(l).f + make(r).f)
       }
-      case BinopSymbol(Minus) => {
+      case Minus => {
         val(l,r) = extract(term.t.xs)
         new AffineRep(make(l).f - make(r).f)
       }
-      case BinopSymbol(Multiply) => {
+      case Multiply => {
         val(l,r) = extract(term.t.xs)
         new AffineRep(make(l).f * make(r).f)
       }
-      case BinopSymbol(Divide) => {
+      case Divide => {
         val(l,r) = extract(term.t.xs)
         new AffineRep(make(l).f + make(r).f)
       }

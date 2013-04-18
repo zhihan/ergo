@@ -58,5 +58,49 @@ class PolynomialSuite extends FunSuite {
     assert(fx.subst(x, fy) == Affine(Map(y -> Rational(1,1)), 2)) 
     val z = fx.subst(x, fy) - Affine(Map(y -> Rational(1,1)), 1)
     assert(z.isValue && z.b == 1)
-  } 
+  }
+
+   test("Solve affine equation with variable") {
+    val x = V("x")
+    val y = V("y")
+    val fx = Affine(Map(x -> Rational(1,1), y-> Rational(-1,1)), 0)
+  
+    val(s, sol) = fx.solve 
+    assert(sol == Yes)
+    assert(!s.isEmpty)
+
+
+    val (variable, value) = s.get
+    assert(fx.subst(variable, value).isZero)
+
+  }
+  
+  test("Polynomial theory solver") {
+    val x = HashConSymbol.make(Var("x"), SReal)
+    val y = HashConSymbol.make(Var("y"), SReal)
+    val xt = HashConTerm.make(x.sv, List())
+    val yt = HashConTerm.make(y.sv, List())
+    val one = HashConSymbol.make(Const(1), SReal)
+    val onet = HashConTerm.make(one.sv, List())
+
+    val x_p_1 = HashConTerm.make(HashConSymbol.realPlus, 
+      List(xt, onet))
+
+    val x_p_1_r = AffineRep.make(x_p_1)
+    val y_r = AffineRep.make(yt)
+
+    val (st, sol) = x_p_1_r.solve(y_r)
+    assert(sol == Yes)
+    assert(!st.isEmpty)
+
+    val (term, value) = st.head
+    assert(x_p_1_r.subst(term, value) equal y_r)
+    
+    val xleaves = x_p_1_r.leaves
+    assert((xleaves.head equal xt) && xleaves.tail == Nil)
+
+    val yleaves = y_r.leaves
+    assert((yleaves.head equal yt) && yleaves.tail == Nil)
+  }
+  
 }

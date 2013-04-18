@@ -7,6 +7,7 @@ import scala.math.Ordering
 // To simplify we do not assume Rep class is hash cons'ed. 
 trait Rep[ConcreteRep] {
   def leaves: List[HashedTerm] 
+  // Note: cannot override the equals method of 'Any'
   def equal(other: ConcreteRep) :Boolean
   def subst(x:HashedTerm, v:ConcreteRep) : ConcreteRep
   def solve(y: ConcreteRep): (List[(HashedTerm, ConcreteRep)], Solution)

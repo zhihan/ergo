@@ -3,28 +3,25 @@ package my.ergo
 import my.util._
 import scala.math.Ordering
 
-/* Binary operators */
-abstract class Binop 
-object Plus extends Binop
-object Minus extends Binop
-object Multiply extends Binop
-object Divide extends Binop
-
 /** Symbol can be a name, a var, a Const int or a binary operator */
 sealed abstract class Symbol
 case class Name (name:String) extends Symbol
 case class Var (name:String) extends Symbol
-case class BinopSymbol (op:Binop) extends Symbol
 case class Const (i:Int) extends Symbol
+
+object Plus extends Symbol 
+object Minus extends Symbol
+object Multiply extends Symbol 
+object Divide extends Symbol 
 
 object Symbol {
   def symbolToString: Symbol=>String = {
     case Name(n) => n
     case Var(x) => x
-    case BinopSymbol(Plus) => "+"
-    case BinopSymbol(Minus) => "-"
-    case BinopSymbol(Multiply) => "*"
-    case BinopSymbol(Divide) => "/" 
+    case Plus => "+"
+    case Minus => "-"
+    case Multiply => "*"
+    case Divide => "/" 
     case Const(i) => i.toString
   }
 
@@ -121,6 +118,11 @@ object HashConSymbol {
   def equal(s1:HashedSymbol, s2:HashedSymbol) = s1.equal(s2)
   def hash(sv:HashedSymbol) = sv.tag
   def clear = tbl.createTable(1000)
+  
+  def plus(t:SymbolType) = make(Plus, t)
+  
+  lazy val realPlus = make(Plus, SReal).sv
+
 }
 
 // Terms 
@@ -150,6 +152,10 @@ class HashedTerm(val t:Term, val tag:Int) {
   }
 
   def hash = tag
+
+  override def toString = "{term:" + t.toString + 
+    ":" + tag.toString + "}"
+
 }
 
 object HashedTermOrdering extends Ordering[HashedTerm] {
@@ -162,6 +168,8 @@ object HashConTerm {
     val (v, tag) = tbl.hashCons(Term(sym, xs))
     new HashedTerm(v, tag)
   }
+
+
   def equal(h1:HashedTerm, h2:HashedTerm) = h1.equal(h2)
   def hashCode(ht:HashedTerm) = ht.tag
   def clear = tbl.createTable(1000)
