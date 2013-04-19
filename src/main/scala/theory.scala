@@ -20,7 +20,7 @@ sealed abstract class Solution
 object No extends Solution
 object Yes extends Solution 
 
-abstract class Theory[ConcreteRep] {
+abstract class Factory[ConcreteRep] {
   def make(x:HashedTerm): ConcreteRep
 }
 

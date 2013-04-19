@@ -157,7 +157,7 @@ class AffineRep ( val f:Affine) extends Rep[AffineRep] {
   override def hashCode = f.hashCode
 }
 
-object AffineRep {
+object AffineRep extends Factory[AffineRep] {
   import RationalConversion._
 
   private def value(v:Rational) = new AffineRep(Affine(Map[V,Rational](), v))
