@@ -59,7 +59,26 @@ class UFSuite extends FunSuite {
 
     assert(d.rep(x2).f.isValue && d.rep(x2).f.b == Rational(2,1))
 
-  } 
+  }
+
+  test("Union value") {
+    val x = HashConSymbol.make(Var("x"), SReal)
+    val xt = HashConTerm.make(x.sv, List[HashedTerm]())
+    val a = UF.empty[AffineRep](AffineRep)
+    val b = a.add(xt)(AffineRep)
+    val one = HashConSymbol.make(Const(1), SReal)
+    val onet = HashConTerm.make(one.sv, List())
+    
+    val x2 = HashConTerm.make(HashConSymbol.realPlus, List(xt,onet))
+    val c = b.add(x2)(AffineRep)
+    val d = c.union(xt, onet)(AffineRep)
+
+    d.print
+    assert(d.rep(x2).f.isValue && d.rep(x2).f.b == Rational(2,1))
+
+  }
+
+   
  
   
 }

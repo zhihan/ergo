@@ -9,10 +9,20 @@ import scala.math.Ordering
 
 import my.polynomial._
 
+class Inconsistent(msg:String=null, cause:Throwable=null)
+  extends RuntimeException(msg, cause)
+{
+  val message = msg
+}
+
 class UF[T <: Rep[T]] (val map:TreeMap[HashedTerm, List[T]], 
   val minv: Map[T,TreeSet[HashedTerm]],
   val mapm: TreeMap[HashedTerm, TreeSet[HashedTerm]],
   val neqs: Map[T, TreeSet[HashedTerm]]) {
+
+ import UF.termOrder
+
+
 // map : term -> the representative
 // minv: representative -> class of terms
 // mapm: leaf -> set of terms whose reprentative uses this leaf
@@ -60,7 +70,7 @@ class UF[T <: Rep[T]] (val map:TreeMap[HashedTerm, List[T]],
   // Cannonitize a representative
   // If r contains a leave that has a representative, substitute
   // it with its representative
-  private def canon(r:T) (fac:Factory[T]): T = {
+  private def canon(r:T) (implicit fac:Factory[T]): T = {
     r.leaves.foldLeft(r)( (acc, leaf) => 
       if (map.contains(leaf)) 
         acc.subst(leaf, rep(leaf)) 
@@ -70,7 +80,7 @@ class UF[T <: Rep[T]] (val map:TreeMap[HashedTerm, List[T]],
   }
 
 
-  def add(t:HashedTerm) (fac:Factory[T]) = {
+  def add(t:HashedTerm) (implicit fac:Factory[T]) = {
     if (map.contains(t)) 
       this
     else {
@@ -90,8 +100,9 @@ class UF[T <: Rep[T]] (val map:TreeMap[HashedTerm, List[T]],
     map.getOrElse(t, fac.make(t))
     
   def classOf(t:HashedTerm) = minv(rep(t))   
-
-  def update(x:HashedTerm, r:T) = {
+  
+  // Update the value of a term 
+  def update(x:HashedTerm, r:T): UF[T] = {
     val toUpdate = mapm(x)
     toUpdate.foldLeft(this) ((acc, term) => {
       // new binding is term => R.subst(x,r)
@@ -105,15 +116,46 @@ class UF[T <: Rep[T]] (val map:TreeMap[HashedTerm, List[T]],
     })
   }
 
+  def union(x: HashedTerm, y:HashedTerm) (implicit fac:Factory[T]):UF[T] = {
+    // Declare implicit factory for convenience
+    val env = this.add(x).add(y)
+    val xR = env.rep(x)
+    val yR = env.rep(y)
+    if (xR equal yR) 
+      env
+    else {
+      // Check for inconsistence
+      if (env.neqs(xR).exists( xN => y equal xN) || 
+          env.neqs(yR).exists( yN => x equal yN)) 
+        throw new Inconsistent("union")
+      else {
+        val (sol, yesno) = xR.solve(yR)
+        yesno match {
+          case No => throw new Inconsistent("union")
+          case Yes => {
+            sol.foldLeft(env)( (acc, res) => {
+              val (term, value) = res
+              val oldEnv = acc
+              // val oldVal = oldEnv.rep(term)
+              // val touched = oldTouched ++ oldEnv.mapm(term)
+              oldEnv.update(term, value)
+            } ) 
+          }
+        } 
+      }
+    }
+  }
+
 }
 
 
 object UF { 
-
   implicit object termOrder extends Ordering[HashedTerm] {
     override def compare(a:HashedTerm, b:HashedTerm) = a.hash - b.hash
   }
-  
+
+
+ 
 // Update mapm map
   private def addMapm[T <: Rep[T]](t:HashedTerm, r:T, 
       mapm: TreeMap[HashedTerm,TreeSet[HashedTerm]]) = {
@@ -138,7 +180,7 @@ object UF {
     // Check inconsistence: 
     if (s.exists( (t:HashedTerm) => 
       r.equal(uf.map(t).head))) { 
-      throw new RuntimeException("Inconsistent") 
+      throw new Inconsistent("AddEq") 
     }
     // Add to the map
     val newVal = uf.neqs.getOrElse(r, TreeSet[HashedTerm]()) ++ s
