@@ -125,6 +125,7 @@ class AffineRep ( val f:Affine) extends Rep[AffineRep] {
     }
   }
   override def equal(that:AffineRep) = (f == that.f)
+
   override def equals(other:Any): Boolean = {
     other match {
       case that:AffineRep => f == that.f
