@@ -94,8 +94,12 @@ case class Affine (vars:Map[V,Rational], val b:Rational) {
   }
 
   def subst(x:V, v:Affine): Affine = {
-    val coeff = A(x)
-    new Affine(A - x, b) + (v * coeff)
+    if (A.contains(x)) {
+     val coeff = A(x)
+      new Affine(A - x, b) + (v * coeff)
+    } else 
+      this  
+    
   }
 
   def solve: (Option[(V, Affine)], Solution) = {
@@ -153,6 +157,7 @@ class AffineRep ( val f:Affine) extends Rep[AffineRep] {
     }
   } 
   
+  override def toString = f.toString
   // These are required because the 
   override def hashCode = f.hashCode
 }
@@ -163,8 +168,9 @@ object AffineRep extends Factory[AffineRep] {
   private def value(v:Rational) = new AffineRep(Affine(Map[V,Rational](), v))
   private def variable(n:String) = new AffineRep(Affine(Map(V(n)->Rational(1,1)),0))
   
-  private def extract(l:List[HashedTerm]) = 
+  private def extract(l:List[HashedTerm]) = { 
     (l.head, l.tail.head)
+  }
 
   def make (term:HashedTerm): AffineRep = {
     term.t.f.symb match {
@@ -184,7 +190,7 @@ object AffineRep extends Factory[AffineRep] {
       }
       case Divide => {
         val(l,r) = extract(term.t.xs)
-        new AffineRep(make(l).f + make(r).f)
+        new AffineRep(make(l).f / make(r).f)
       }
       case Const(i) => value(i)
     }

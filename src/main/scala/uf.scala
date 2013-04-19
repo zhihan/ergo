@@ -17,6 +17,43 @@ class UF[T <: Rep[T]] (val map:TreeMap[HashedTerm, List[T]],
 // minv: representative -> class of terms
 // mapm: leaf -> set of terms whose reprentative uses this leaf
 // neqs: representative -> nonequal terms    
+  private def mapToString = "Map:{\n" +
+    map.toList.map{ 
+      case(term, lr) => term.t.toString + " -> " + 
+        lr.head.toString 
+    }.mkString(";\n") + 
+    "\n}\n"
+    
+  private def minvToString = "Minv:{\n" +
+    minv.toList.map{
+      case(rep, setT) => rep.toString + " -> " + "[" +
+        setT.toList.map{
+          v => v.t.toString  
+        }.mkString(";") + "]"
+    }.mkString(";\n") +
+    "\n}\n"
+
+  private def mapmToString = "MapM:{\n" +
+    mapm.toList.map {
+      case(term, setT) => term.t.toString + " -> " + "[" +
+        setT.toList.map{
+          v => v.t.toString  
+        }.mkString(";") + "]"
+    }.mkString(";\n") +
+    "\n}\n"
+    
+  private def neqsToString = "Neqs:{\n" +
+    neqs.toList.map {
+      case(rep, setT) => rep.toString + " -> " + "[" +
+        setT.toList.map{
+          v => v.t.toString  
+        }.mkString(";") + "]"
+    }.mkString(";\n") +
+    "\n}\n"
+    
+
+  def print = println(mapToString + minvToString +
+    mapmToString + neqsToString )
 
   def rep(x:HashedTerm):T = map(x).head
 
@@ -43,6 +80,29 @@ class UF[T <: Rep[T]] (val map:TreeMap[HashedTerm, List[T]],
         UF.addMapm(t,r,mapm),
         UF.initNeqs(r, neqs))
     }
+  }
+  
+  def contains(t:HashedTerm) = map.contains(t)
+  
+  // Get the representative, create a fresh one if not found
+  // The difference from add is that we do not adding the rep
+  def getR(t:HashedTerm)(fac:Factory[T]) = 
+    map.getOrElse(t, fac.make(t))
+    
+  def classOf(t:HashedTerm) = minv(rep(t))   
+
+  def update(x:HashedTerm, r:T) = {
+    val toUpdate = mapm(x)
+    toUpdate.foldLeft(this) ((acc, term) => {
+      // new binding is term => R.subst(x,r)
+      val oldR = rep(term)
+      val newR = oldR.subst(x, r)
+      val oldNeqs = neqs(oldR) 
+      new UF[T]( UF.addMap(term, newR, acc.map), 
+        UF.addMinv(term, newR, acc.minv),
+        UF.addMapm(term, newR, acc.mapm),
+        UF.addNeq(oldNeqs, newR, acc))
+    })
   }
 
 }
@@ -71,7 +131,7 @@ object UF {
   
   // Update map
   private def addMap[T](t: HashedTerm, r:T, m:TreeMap[HashedTerm,List[T]]) = 
-    m + (t -> (r :: m(t) ))
+    m + (t -> (r :: m.getOrElse(t, Nil) ))
 
   // Update the nonequality map
   private def addNeq[T <: Rep[T]](s: TreeSet[HashedTerm], r:T, uf:UF[T])= {

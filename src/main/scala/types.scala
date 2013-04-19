@@ -153,9 +153,10 @@ class HashedTerm(val t:Term, val tag:Int) {
 
   def hash = tag
 
-  override def toString = "{term:" + t.toString + 
+  def details = "{term:" + t.toString + 
     ":" + tag.toString + "}"
 
+  override def toString = t.toString
 }
 
 object HashedTermOrdering extends Ordering[HashedTerm] {
