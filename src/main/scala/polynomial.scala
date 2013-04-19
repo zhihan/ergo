@@ -123,8 +123,9 @@ class AffineRep ( val f:Affine) extends Rep[AffineRep] {
         HashConTerm.make(s.sv, List[HashedTerm]())
       }  
     }
-  } 
-  override def equal(other:AffineRep): Boolean = {
+  }
+  override def equal(that:AffineRep) = (f == that.f)
+  override def equals(other:Any): Boolean = {
     other match {
       case that:AffineRep => f == that.f
       case _ => false
@@ -151,7 +152,8 @@ class AffineRep ( val f:Affine) extends Rep[AffineRep] {
     }
   } 
   
-  override def hashCode = f.hashCode 
+  // These are required because the 
+  override def hashCode = f.hashCode
 }
 
 object AffineRep {

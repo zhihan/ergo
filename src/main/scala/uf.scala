@@ -29,6 +29,7 @@ object UF {
     override def compare(a:HashedTerm, b:HashedTerm) = a.hash - b.hash
   }
 
+  // Update mapm map
   def addMapm[T](t:HashedTerm, r:Rep[T], mapm: TreeMap[HashedTerm,TreeSet[HashedTerm]]) = {
     val leaves = r.leaves
     leaves.foldLeft(mapm) { (acc,x) => {
@@ -36,7 +37,15 @@ object UF {
         acc + (x -> (s + t)) 
       }
     }
-  } 
+  }
+  
+  // Update minv map
+  def addMinv[T](t:HashedTerm, r: Rep[T], minv: Map[Rep[T], TreeSet[HashedTerm]]) = 
+    minv + (r -> (if (minv.contains(r)) minv(r) + t  else TreeSet(t) ))
+  
+  // Update map
+  def addMap[T](t: HashedTerm, r:Rep[T], m:TreeMap[HashedTerm,List[Rep[T]]]) = 
+    m + (t -> (r :: m(t) ))
 
   def empty[T] = new UF( TreeMap[HashedTerm, List[Rep[T]]](),
     Map[Rep[T], TreeSet[HashedTerm]] (),

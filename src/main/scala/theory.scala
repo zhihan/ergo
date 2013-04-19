@@ -13,6 +13,7 @@ trait Rep[ConcreteRep] {
   def solve(y: ConcreteRep): (List[(HashedTerm, ConcreteRep)], Solution)
      
   def hashCode : Int
+  def equals(that:Any): Boolean
 }
 
 sealed abstract class Solution
