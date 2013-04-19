@@ -73,12 +73,34 @@ class UFSuite extends FunSuite {
     val c = b.add(x2)(AffineRep)
     val d = c.union(xt, onet)(AffineRep)
 
-    d.print
     assert(d.rep(x2).f.isValue && d.rep(x2).f.b == Rational(2,1))
 
+    val l = d.explain(xt, onet)
+    assert(!l.isEmpty)
   }
 
-   
- 
+  test("Distinct value") {
+    val x = HashConSymbol.make(Var("x"), SReal)
+    val xt = HashConTerm.make(x.sv, List[HashedTerm]())
+    val a = UF.empty[AffineRep](AffineRep)
+    val b = a.add(xt)(AffineRep)
+    val y = HashConSymbol.make(Var("y"), SReal)
+    val yt = HashConTerm.make(y.sv, List())
+    val c = b.distinct(xt, yt)(AffineRep)
+    
+    assert(c.neqs.size == 2)
+    assert(c.areDistinct(xt,yt))
+
+    // Try to union
+    var result = false
+    try { 
+      c.union(xt,yt)(AffineRep)
+    } catch {
+      case ex:Inconsistent => { 
+        result = true
+      }
+    }
+    assert(result) 
+  }
   
 }

@@ -7,6 +7,8 @@ import scala.collection.immutable.Map
 
 import scala.math.Ordering
 
+import scala.annotation._
+
 import my.polynomial._
 
 class Inconsistent(msg:String=null, cause:Throwable=null)
@@ -20,13 +22,14 @@ class UF[T <: Rep[T]] (val map:TreeMap[HashedTerm, List[T]],
   val mapm: TreeMap[HashedTerm, TreeSet[HashedTerm]],
   val neqs: Map[T, TreeSet[HashedTerm]]) {
 
- import UF.termOrder
+  // Define the implicit ordering of terms in this class
+  import UF.termOrder
 
 
-// map : term -> the representative
-// minv: representative -> class of terms
-// mapm: leaf -> set of terms whose reprentative uses this leaf
-// neqs: representative -> nonequal terms    
+  // map : term -> the representative
+  // minv: representative -> class of terms
+  // mapm: leaf -> set of terms whose reprentative uses this leaf
+  // neqs: representative -> nonequal terms    
   private def mapToString = "Map:{\n" +
     map.toList.map{ 
       case(term, lr) => term.t.toString + " -> " + 
@@ -123,7 +126,7 @@ class UF[T <: Rep[T]] (val map:TreeMap[HashedTerm, List[T]],
     val yR = env.rep(y)
     if (xR equal yR) 
       env
-    else {
+    else 
       // Check for inconsistence
       if (env.neqs(xR).exists( xN => y equal xN) || 
           env.neqs(yR).exists( yN => x equal yN)) 
@@ -139,24 +142,66 @@ class UF[T <: Rep[T]] (val map:TreeMap[HashedTerm, List[T]],
               // val oldVal = oldEnv.rep(term)
               // val touched = oldTouched ++ oldEnv.mapm(term)
               oldEnv.update(term, value)
-            } ) 
-          }
+            })
+          } 
         } 
-      }
+      } 
+  }
+
+  def distinct(x: HashedTerm, y:HashedTerm)(implicit fac:Factory[T]) = {
+    val env = this.add(x).add(y)
+    val xR = env.rep(x)
+    val yR = env.rep(y)
+    if (xR equal yR) throw new Inconsistent("distinct")
+    
+    val xN = env.neqs(xR)
+    val yN = env.neqs(yR)
+    
+    new UF[T](env.map, env.minv, env.mapm,
+      env.neqs + (xR -> (xN +y)) + (yR -> (yN+x)))
+  }
+
+  def areEqual(t1:HashedTerm, t2:HashedTerm)(implicit fac:Factory[T]) = {
+    val r1 = if (map.contains(t1))
+        rep(t1) 
+      else 
+        canon(fac.make(t1))
+    val r2 = if (map.contains(t2))
+        rep(t2)
+      else
+        canon(fac.make(t2))
+    r1 equal r2
+  }
+
+  def areDistinct(t1:HashedTerm, t2:HashedTerm)= {
+    if (!map.contains(t1) || !map.contains(t2))
+      // If either is not found, assume false
+      false
+    else {
+      val r1 = rep(t1)
+      val r2 = rep(t2)
+      val n1 = neqs(r1)
+      val n2 = neqs(r2)
+      n1.contains(t2) || n2.contains(t1)
     }
+  }
+
+  def explain[T<:Rep[T]] (x:HashedTerm, y:HashedTerm) = {
+    val h1 = map(x)
+    val h2 = map(y)
+    UF.commonExpr(h1,h2)
   }
 
 }
 
 
 object UF { 
+  // Implicit ordering of hashed terms 
   implicit object termOrder extends Ordering[HashedTerm] {
     override def compare(a:HashedTerm, b:HashedTerm) = a.hash - b.hash
   }
-
-
  
-// Update mapm map
+  // Update mapm map
   private def addMapm[T <: Rep[T]](t:HashedTerm, r:T, 
       mapm: TreeMap[HashedTerm,TreeSet[HashedTerm]]) = {
     val leaves = r.leaves
@@ -168,7 +213,8 @@ object UF {
   }
   
   // Update minv map
-  private def addMinv[T <: Rep[T]](t:HashedTerm, r: T, minv: Map[T, TreeSet[HashedTerm]]) = 
+  private def addMinv[T <: Rep[T]](t:HashedTerm, r: T, 
+    minv: Map[T, TreeSet[HashedTerm]]) = 
     minv + (r -> (if (minv.contains(r)) minv(r) + t  else TreeSet(t) ))
   
   // Update map
@@ -187,8 +233,6 @@ object UF {
     uf.neqs + (r -> newVal)
   }
 
-
-
   def empty[T<: Rep[T]] (uf:Factory[T]) = new UF( 
     TreeMap[HashedTerm, List[T]](),
     Map[T, TreeSet[HashedTerm]] (),
@@ -200,5 +244,19 @@ object UF {
       neqs
     else
       neqs + (r -> TreeSet[HashedTerm]())
-  
+
+  private def commonExpr[T<:Rep[T]](h1:List[T], h2:List[T]) = {
+    @tailrec def loop(x:List[T], y:List[T], acc:List[T]):List[T] = {
+      (x,y) match {
+        case (Nil,_) => acc
+        case (_, Nil) => acc
+        case (r1:: xtail, r2::ytail) => 
+          if (r1 equal r2) 
+            loop(xtail, ytail, r1 :: (r2 :: acc))  
+          else acc
+      }
+    }
+    loop(h1, h2, Nil)
+  }
+ 
 }
