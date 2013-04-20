@@ -70,6 +70,9 @@ class UF[T <: Rep[T]] (val map:TreeMap[HashedTerm, List[T]],
 
   def rep(x:HashedTerm):T = map(x).head
 
+  def find(x:HashedTerm)(implicit fac:Factory[T]): T = 
+    if (map.contains(x)) rep(x) else fac.make(x)
+
   // Cannonitize a representative
   // If r contains a leave that has a representative, substitute
   // it with its representative
