@@ -106,7 +106,12 @@ class UF[T <: Rep[T]] (val map:TreeMap[HashedTerm, List[T]],
     map.getOrElse(t, fac.make(t))
     
   def classOf(t:HashedTerm) = minv(rep(t))   
-  
+
+  def leafReps(t:HashedTerm) : List[T] = {
+    val r = rep(t) // Assuming rep(t) exists
+    r.leaves.map( e => rep(e))
+  }  
+
   // Update the value of a term 
   def update(x:HashedTerm, r:T): UF[T] = {
     val toUpdate = mapm(x)
