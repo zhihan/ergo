@@ -71,7 +71,7 @@ class UFSuite extends FunSuite {
     
     val x2 = HashConTerm.make(HashConSymbol.realPlus, List(xt,onet))
     val c = b.add(x2)(AffineRep)
-    val d = c.union(xt, onet)(AffineRep)
+    val (d,_) = c.union(xt, onet)(AffineRep)
 
     assert(d.rep(x2).f.isValue && d.rep(x2).f.b == Rational(2,1))
 

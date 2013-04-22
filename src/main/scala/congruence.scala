@@ -54,6 +54,53 @@ class Context[T<:Rep[T]] (val use:Map[T, TreeSet[HashedTerm]], val uf: UF[T]) {
     } 
   }
 
+  // Update the context for a substitution 
+  private def update(p: HashedTerm, hasP: TreeSet[HashedTerm], 
+    leafReps: List[T]): Context[T] = {
+         val termsUseP = acc.use(p)
+       // Update use map: terms use p now uses leaf of p-value
+        val newUse = leafRepsP.foldLeft (acc.use) (
+          (accUse, leafR) => {
+            val oldUseVal = acc.use(leafR)
+            use + (leafR -> (oldUseVal ++ termsUseP) )
+          }
+        )  
+
+        // Get all affected terms
+        val allAffected = hasP.foldLeft (termsUseP)(
+          // For each term that uses p,
+          //  find the corresponding new rep, all uses of the 
+          //  leaves of the new rep need to be considered for equivalence
+          (acc, changedT) =>
+            acc ++ newUf.leafReps(changedT).foldLeft (acc) (
+            (affected, lr) => affected ++ use(lr)
+          )
+        )
+       // Recursively add congruences  
+   
+  }
+
+
+  // Add the fact that t1 and t2 are congruent 
+  def addCongruence(t1: HashedTerm, t2:HashedTerm)
+    (implicit fac:Factory[T]) : Context[T] = {
+    if (uf.areEqual(t1, t2)) 
+      // If t1 and t2 are known to be equal, nothing to do
+      this
+    else 
+
+      val (newUf, result) = uf.union(t1, t2)
+      // Reverse the substitution order
+      val resultOrdered = result.reverse
+
+      // 
+      resultOrdered.foldLeft ( ) (
+        val (p, hasP, leafRepsP) = x
+
+      this 
+    }
+  }
+
 }
 
 object Context {
@@ -61,5 +108,5 @@ object Context {
   
   def empty[T<:Rep[T]] (fac:Factory[T]) = 
     new Context( Map[T,TreeSet[HashedTerm]](),UF.empty[T](fac))
-  
+
 }

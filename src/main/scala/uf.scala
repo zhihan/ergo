@@ -127,13 +127,20 @@ class UF[T <: Rep[T]] (val map:TreeMap[HashedTerm, List[T]],
     })
   }
 
-  def union(x: HashedTerm, y:HashedTerm) (implicit fac:Factory[T]):UF[T] = {
+  // Union operation with additional return arguments:
+  // (p,touched,leaves) : 
+  // * p - (old) reps of the term that are solved by the solver
+  // * hasP - terms that has p as its leaf
+  // * leafRepsP - (new) leaf Rep's of the new rep of p.
+  type Result = (T, TreeSet[HashedTerm], List[T])
+  def union(x: HashedTerm, y:HashedTerm) (implicit fac:Factory[T]): 
+  (UF[T], List[Result]) = {
     // Declare implicit factory for convenience
     val env = this.add(x).add(y)
     val xR = env.rep(x)
     val yR = env.rep(y)
     if (xR equal yR) 
-      env
+      (env, List[Result]())
     else 
       // Check for inconsistence
       if (env.neqs(xR).exists( xN => y equal xN) || 
@@ -144,17 +151,21 @@ class UF[T <: Rep[T]] (val map:TreeMap[HashedTerm, List[T]],
         yesno match {
           case No => throw new Inconsistent("union")
           case Yes => {
-            sol.foldLeft(env)( (acc, res) => {
+            sol.foldLeft(
+              (env, List[Result]())) ( (acc, res) => {
               val (term, value) = res
-              val oldEnv = acc
-              // val oldVal = oldEnv.rep(term)
-              // val touched = oldTouched ++ oldEnv.mapm(term)
-              oldEnv.update(term, value)
+              val (accEnv, accRes) = acc
+              val p = accEnv.rep(term)
+              val hasP = accEnv.mapm(term)
+              val leafRepsP = value.leaves.map(t => accEnv.rep(t))
+              (accEnv.update(term, value), 
+                (p, hasP, leafRepsP) :: accRes )
             })
           } 
         } 
       } 
   }
+
 
   def distinct(x: HashedTerm, y:HashedTerm)(implicit fac:Factory[T]) = {
     val env = this.add(x).add(y)
