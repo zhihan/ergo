@@ -2,6 +2,7 @@ package my.ergo
 
 import my.util._
 import scala.math.Ordering
+import scala.collection.immutable.TreeSet
 
 /** Symbol can be a name, a var, a Const int or a binary operator */
 sealed abstract class Symbol
@@ -140,6 +141,7 @@ case class Term(val f:SymbolView, val xs:List[HashedTerm]) extends HashedType {
 }
 
 class HashedTerm(val t:Term, val tag:Int) {
+  implicit val ordering = HashedTermOrdering 
   def equal(other:HashedTerm) = (tag == other.tag)
 
   def subst(s:Map[SymbolView,HashedTerm]):HashedTerm = {
@@ -155,6 +157,9 @@ class HashedTerm(val t:Term, val tag:Int) {
 
   def details = "{term:" + t.toString + 
     ":" + tag.toString + "}"
+
+  def subTerms : TreeSet[HashedTerm] = 
+    t.xs.foldLeft(TreeSet[HashedTerm](this))( (acc, t) => acc ++ t.subTerms)
 
   override def toString = t.toString
 }

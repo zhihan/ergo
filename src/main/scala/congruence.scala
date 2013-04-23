@@ -12,6 +12,19 @@ import my.ergo._
 // Every step of the inference rule produces a context
 class Context[T<:Rep[T]] (val use:Map[T, TreeSet[HashedTerm]], val uf: UF[T]) {
   import my.ergo.UF.termOrder
+  private def useToString = "Use:{\n" +
+    use.toList.map{ 
+      case(rep, setT) => rep.toString + " -> " + "[" +
+        setT.toList.map{
+          v => v.t.toString  
+        }.mkString(";") + "]"
+    }.mkString(";\n") +
+    "\n}\n"
+
+  def print {
+    println(useToString)
+    uf.print
+  }
  
   private def matchArg(t1:HashedTerm, t2:HashedTerm)(implicit fac:Factory[T]) = 
     uf.areEqual(t1, t2) 
@@ -29,15 +42,20 @@ class Context[T<:Rep[T]] (val use:Map[T, TreeSet[HashedTerm]], val uf: UF[T]) {
     else false 
   }
 
-  // Add a term to the CC context 
-  def addTerm(t:HashedTerm)(implicit fac:Factory[T]): Context[T] = {
+  private def congruents(t: HashedTerm, tl:TreeSet[HashedTerm])
+    (implicit fac:Factory[T]): List[(HashedTerm,HashedTerm)] = {
+    tl.filter( t2 => congruent(t,t2)).map(t2 => (t,t2) ).toList
+  }
+
+  // Add a term to the CC context and update use 
+  private def addATerm(t:HashedTerm)(implicit fac:Factory[T]): Context[T] = {
     if (uf.contains(t)) this 
     else {
       // 1) Add the term to the UF context
       val ctxWithT = new Context[T](use, uf.add(t))
       val xs = t.t.xs
       // Recursively add arguments 
-      val ctx = xs.foldLeft(ctxWithT)((acc,x) => acc.addTerm(x))
+      val ctx = xs.foldLeft(ctxWithT)((acc,x) => acc.addATerm(x))
 
       // 2) Update use with: "t uses leaf rep's of xs" 
       val rt = uf.find(t) 
@@ -49,9 +67,32 @@ class Context[T<:Rep[T]] (val use:Map[T, TreeSet[HashedTerm]], val uf: UF[T]) {
             val useOfL = acc(xr)
             acc + (xr -> (acc(xr) + t))
           }
-        ) 
+        )
       new Context[T](newUse, ctx.uf)
     } 
+  }
+
+  // Add a term to the CC context; and discover new congruences to 
+  // facilitate incremental uses.
+  def addTerm(tin:HashedTerm)(implicit fac:Factory[T]): Context[T] = {
+    val allTerms = tin.subTerms
+    allTerms.foldLeft (this) ( (acc, t) => {
+      val ctx = acc.addATerm(t)
+      val xs = t.t.xs
+      // Rep's of the leaves of the arguments
+      val leafRepXs = xs.foldLeft(Set[T]())(
+          (ac,x) => ac ++ ctx.uf.leafReps(x) )
+      val newCtx = leafRepXs.foldLeft(ctx)( (innerAcc, rx) => {
+        // Terms that uses the leaf
+        val leafUses = use(rx)
+        leafUses.foldLeft(innerAcc) ((inAcc, leafUse) => {
+          if (inAcc.congruent(t,leafUse)) 
+            inAcc.addCongruence(t, leafUse)
+          else inAcc
+        })
+      })
+      newCtx
+    })
   }
 
 
@@ -110,6 +151,9 @@ class Context[T<:Rep[T]] (val use:Map[T, TreeSet[HashedTerm]], val uf: UF[T]) {
       })
     }
   }
+
+  def areEqual(t1: HashedTerm, t2: HashedTerm)
+    (implicit fac:Factory[T]) = uf.areEqual(t1,t2)
 
 }
 
