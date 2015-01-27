@@ -1,7 +1,7 @@
 package test.hashcons
 
 import my.util._
-
+import scala.language.implicitConversions
 import org.scalatest.FunSuite
 
 class HashedString(val s:String) extends HashedType {

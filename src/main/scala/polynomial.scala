@@ -4,6 +4,7 @@ import scala.annotation._
 import scala.math._
 import scala.collection.immutable.Map
 import my.ergo._
+import scala.language.implicitConversions
 
 class Rational(n:Int, d:Int)
 {
